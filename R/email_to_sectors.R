@@ -154,4 +154,5 @@ email_to_sectors <- function(data, id, input, output,
       dplyr::mutate(sector = 1) %>% 
       dplyr::select(!!id, !!output, sector)
   }
+  return(matched_by_both)
 }
