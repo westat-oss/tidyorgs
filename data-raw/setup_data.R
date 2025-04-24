@@ -85,7 +85,7 @@ check_match <- function(org, catch_terms) {
   return(any(str_to_lower(org) %in% str_to_lower(terms)))
 }
 
-# Update existing data to include patent data  --------------------------
+# Update existing data to include patent data and fixes to known issues  --------------------------
 
   library(countrycode)
 
@@ -101,7 +101,7 @@ check_match <- function(org, catch_terms) {
                                     regex(catch_terms_pattern, ignore_case = TRUE))) %>%
     filter(match_found == FALSE) %>%
     select(disambig_assignee_organization, country) %>%
-    mutate(country_full = countrycode(country, "iso2c", "country.name")) |>
+    mutate(country_full = countrycode(country, "iso2c", "country.name")) %>%
     select(disambig_assignee_organization, country_full) %>%
     rename(country = country_full)
   
@@ -155,6 +155,12 @@ check_match <- function(org, catch_terms) {
   new_rows[setdiff(existing_cols, colnames(new_rows))] <- NA
   
   business_data <- bind_rows(business_data, new_rows)
+
+  business_data <- business_data %>%
+    mutate(country = str_replace(country, "United States of America", "United States")) %>%
+    filter(!(organization_name == "Festo" & country == "Czech Republic")) %>%
+    filter(!(organization_name == "Cision" & is.na(country))) %>%
+    filter(!(organization_name == "Software Creations" & country == "United Kingdom"))
   
   usethis::use_data(business_data, overwrite = TRUE)
   usethis::use_data(business_data, internal = TRUE, overwrite = TRUE)
@@ -191,6 +197,16 @@ check_match <- function(org, catch_terms) {
   new_rows[setdiff(existing_cols, colnames(new_rows))] <- NA
   
   government_data <- bind_rows(government_data, new_rows)
+
+  government_data <- government_data %>%
+    filter(!(organization_name == "National Aeronautics and Space Administration" & is.na(country))) %>%
+    mutate(
+      catch_terms = if_else(
+        str_detect(organization_name, "National Aeronautics and Space Administration"),
+        paste0(catch_terms, " | nasa"),
+        catch_terms
+      )
+    )
   
   usethis::use_data(government_data, overwrite = TRUE)
   usethis::use_data(government_data, internal = TRUE, overwrite = TRUE)
